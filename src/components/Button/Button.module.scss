@@ -1,0 +1,27 @@
+.button {
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 16px;
+  transition-duration: 0.3s;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.primary {
+  background-color: #3d6188;
+}
+
+.secondary {
+  background-color: #DDD;
+  color: #333;
+}

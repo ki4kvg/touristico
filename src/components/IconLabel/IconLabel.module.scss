@@ -1,0 +1,24 @@
+.icon_label_wrapper {
+  min-width: 120px;
+  border-radius: 4px;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  align-items: center;
+  justify-content: start;
+  cursor: pointer;
+  transition-duration: 0.3s;
+  font-size: 16px;
+
+  &:hover {
+    background-color: #dcdcdc;
+  }
+}
+
+.start {
+  flex-direction: row;
+}
+
+.end {
+  flex-direction: row-reverse;
+}
