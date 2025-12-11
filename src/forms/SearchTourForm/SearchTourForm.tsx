@@ -2,40 +2,28 @@ import styles from './SearchTourForm.module.scss';
 import Button from '@/components/Button/Button.tsx';
 import IconLabel from '@/components/IconLabel/IconLabel.tsx';
 import { CityIcon, HotelIcon } from '@/assets';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import DropdownInput from '@/components/Dropdown/DropdownInput.tsx';
 import { useSearchTour } from '@/modules/search/hooks/useSearchForm.ts';
 import type { NormalizedGeoItem } from '@/modules/search/dto/search.dto.ts';
 import * as React from 'react';
-
-const SEARCH_TOUR = {
-  SEARCH_VALUE_ID: 'searchValue',
-  SELECTED_OBJECT_ID: 'selectedValue',
-} as const;
-
-const formSchema = z.object({
-  [SEARCH_TOUR.SEARCH_VALUE_ID]: z.string().min(1, 'Будь ласка, введіть інформацію для пошуку'),
-  [SEARCH_TOUR.SELECTED_OBJECT_ID]: z
-    .object({
-      countryId: z.union([z.string(), z.number()]),
-    })
-    .optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { useSearchPrices } from '@/modules/searchPrices/hooks/useSearchPrices.ts';
+import Loader from '@/components/Loader/Loader.tsx';
+import EmptyState from '@/components/EmptyState/EmptyState.tsx';
+import { SEARCH_TOUR, searchPricesFormSchema, type SearchPricesFormValues } from '@/forms/SearchTourForm/validation.ts';
 
 export function SearchTourForm() {
   const { isOpen, setIsOpen, options, isLoading, selectOption, handleInputChange, searchField, clear } =
     useSearchTour();
+  const { isLoading: isPricesLoading, error, startSearch, isEmpty } = useSearchPrices();
 
   const {
     setValue,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  } = useForm<SearchPricesFormValues>({
+    resolver: zodResolver(searchPricesFormSchema),
     mode: 'onChange',
     criteriaMode: 'all',
   });
@@ -70,10 +58,11 @@ export function SearchTourForm() {
     return <img src={item.icon} alt="flag" width={24} />;
   };
 
-  const onSubmit = async (form: FormValues) => {
+  const onSubmit = async (form: SearchPricesFormValues) => {
     try {
-      //TODO in next task
-      console.log('Form values', form);
+      const selectedCountryId = form.selectedValue?.countryId;
+      if (!selectedCountryId) return;
+      startSearch(selectedCountryId);
     } catch (error) {
       console.error(error, 'Error starting search');
     }
@@ -108,6 +97,11 @@ export function SearchTourForm() {
         <Button color="primary" type="submit">
           Знайти
         </Button>
+        {isPricesLoading && <Loader text="Виконується пошук" />}
+
+        {!isPricesLoading && error && <p className={styles.error_text}>{error}</p>}
+
+        {!isPricesLoading && !error && isEmpty && <EmptyState text="За вашим запитом турів не знайдено" />}
       </form>
     </div>
   );
