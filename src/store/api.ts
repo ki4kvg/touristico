@@ -11,6 +11,7 @@ import {
 } from '../../api';
 import type {
   CountriesMap,
+  ErrorResponse,
   GeoResponse,
   GetSearchPricesResponse,
   Hotel,
@@ -61,7 +62,7 @@ export const api = createApi({
       },
     }),
 
-    getSearchPrices: builder.query<GetSearchPricesResponse, { token: string }>({
+    getSearchPrices: builder.query<GetSearchPricesResponse & ErrorResponse, { token: string }>({
       queryFn: async ({ token }) => {
         try {
           const res = await getSearchPrices(token);

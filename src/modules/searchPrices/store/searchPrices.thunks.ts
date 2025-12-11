@@ -1,0 +1,65 @@
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import { setData, setError, setToken, startLoading } from './searchPrices.slice.ts';
+import type { NormalisedPriceOffer } from '@/modules/searchPrices/dto/searchPrices.dto.ts';
+import { api } from '@/store/api.ts';
+import type { AppDispatch, RootState } from '@/store/store.ts';
+import { mapPriceResult } from '@/modules/searchPrices/mappers/searchPrices.mapper.ts';
+
+interface SearchPayload {
+  countryId: string;
+}
+
+export const searchPricesThunk = createAsyncThunk<
+  NormalisedPriceOffer[],
+  SearchPayload,
+  { dispatch: AppDispatch; state: RootState }
+>('searchPrices/search', async ({ countryId }, { dispatch }) => {
+  dispatch(startLoading());
+
+  try {
+    const startRes = await dispatch(api.endpoints.startSearchPrices.initiate({ countryId: countryId }));
+    const token = startRes.data!.token;
+    const waitUntil = new Date(startRes.data!.waitUntil).getTime();
+
+    dispatch(setToken({ token }));
+
+    const maxRetries = 2;
+    let retries = 0;
+    let result: any = null;
+
+    while (true) {
+      const now = Date.now();
+      const waitTime = waitUntil - now;
+      if (waitTime > 0) {
+        await new Promise((res) => setTimeout(res, waitTime));
+      }
+
+      const res = await dispatch(api.endpoints.getSearchPrices.initiate({ token: token }));
+
+      if (res.data) {
+        if (!('code' in res.data)) {
+          result = res.data;
+          break;
+        } else if (res.data.code === 404) {
+          if (retries < maxRetries) {
+            retries++;
+            continue;
+          } else {
+            throw new Error(res.data.message || 'Search failed after retries');
+          }
+        } else if (res.data.code === 425) {
+          continue;
+        }
+      }
+    }
+
+    const mapped = mapPriceResult(result.prices);
+
+    dispatch(setData(mapped));
+
+    return mapped;
+  } catch (error: any) {
+    dispatch(setError(error.message || 'Unknown error'));
+    throw error;
+  }
+});
