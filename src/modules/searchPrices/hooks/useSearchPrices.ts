@@ -1,5 +1,6 @@
 import { useAppDispatch, useAppSelector } from '@/hooks/reduxHooks.ts';
 import {
+  selectPriceSearchAborting,
   selectPriceSearchError,
   selectPriceSearchIsLoading,
   selectPriceSearchResults,
@@ -13,6 +14,7 @@ export const useSearchPrices = () => {
   const data = useAppSelector(selectPriceSearchResults);
   const isLoading = useAppSelector(selectPriceSearchIsLoading);
   const error = useAppSelector(selectPriceSearchError);
+  const isAborting = useAppSelector(selectPriceSearchAborting);
   const isEmpty = data ? data.length === 0 : false;
 
   const startSearch = (countryId: string | number) => {
@@ -22,6 +24,7 @@ export const useSearchPrices = () => {
   return {
     data,
     isLoading,
+    isAborting,
     isEmpty,
     error,
     startSearch,
