@@ -98,7 +98,7 @@ export const api = createApi({
       },
     }),
 
-    getHotel: builder.query<Hotel, { hotelId: number | string }>({
+    getHotel: builder.query<Hotel, { hotelId: number }>({
       queryFn: async ({ hotelId }) => {
         try {
           const res = await getHotel(hotelId);

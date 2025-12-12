@@ -2,36 +2,60 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { api } from '@/store/api.ts';
 import { hotelsService } from '@/modules/hotels/services/hotels.service.ts';
 import { mapHotel } from '@/modules/hotels/mappers/hotels.mapper.ts';
-import type { NavigateFunction } from 'react-router-dom';
 import type { AppDispatch, RootState } from '@/store/store.ts';
-import { setHotels, setLinkedHotels, setLoading } from '@/modules/hotels/store/hotels.slice.ts';
+import {
+  setCurrentHotel,
+  setCurrentPriceOffer,
+  setHotels,
+  setLinkedHotels,
+  startLoading,
+  stopLoading,
+} from '@/modules/hotels/store/hotels.slice.ts';
 import type { NormalisedPriceOffer } from '@/modules/searchPrices/dto/searchPrices.dto.ts';
 
 interface GetHotelsPayload {
   countryId: string;
-  navigate: NavigateFunction;
   prices: NormalisedPriceOffer[];
 }
 
 export const getHotelsThunk = createAsyncThunk<void, GetHotelsPayload, { dispatch: AppDispatch; state: RootState }>(
   'getHotels/execute',
-  async ({ countryId, navigate, prices }, { dispatch }) => {
-    dispatch(setLoading(true));
-    const hotels = await dispatch(api.endpoints.getHotels.initiate({ countryId })).unwrap();
+  async ({ countryId, prices }, { dispatch }) => {
+    dispatch(startLoading());
+    try {
+      const hotels = await dispatch(api.endpoints.getHotels.initiate({ countryId })).unwrap();
 
-    const mappedHotels = Object.values(hotels).map(mapHotel);
+      const mappedHotels = Object.values(hotels).map(mapHotel);
 
-    dispatch(setHotels(mappedHotels));
+      dispatch(setHotels(mappedHotels));
 
-    if (!prices || !hotels || mappedHotels.length === 0 || prices.length === 0) {
-      navigate(-1);
-      dispatch(setLoading(false));
-      return;
+      const final = hotelsService.linkAndMapOffersWithHotels(prices, mappedHotels);
+
+      dispatch(setLinkedHotels(final));
+    } finally {
+      dispatch(stopLoading());
     }
-
-    const final = hotelsService.linkAndMapOffersWithHotels(prices, mappedHotels);
-
-    dispatch(setLinkedHotels(final));
-    dispatch(setLoading(false));
   },
 );
+
+interface GetHotelDetailsPayload {
+  hotelId: string;
+  priceId: string;
+}
+
+export const getHotelDetailsThunk = createAsyncThunk<
+  void,
+  GetHotelDetailsPayload,
+  { dispatch: AppDispatch; state: RootState }
+>('getHotels/execute', async ({ hotelId, priceId }, { dispatch }) => {
+  dispatch(startLoading());
+  try {
+    const hotel = await dispatch(api.endpoints.getHotel.initiate({ hotelId: Number(hotelId) })).unwrap();
+    dispatch(setCurrentHotel(hotel));
+
+    const price = await dispatch(api.endpoints.getPrice.initiate({ priceId })).unwrap();
+    dispatch(setCurrentPriceOffer(price));
+  } finally {
+    dispatch(stopLoading());
+  }
+});

@@ -38,19 +38,16 @@ export const searchPricesThunk = createAsyncThunk<
 
       const res = await dispatch(api.endpoints.getSearchPrices.initiate({ token: token }));
 
-      if (res.data) {
-        if (!('code' in res.data)) {
-          result = res.data;
-          break;
-        } else if (res.data.code === 404) {
-          if (retries < maxRetries) {
-            retries++;
-            continue;
-          } else {
-            throw new Error(res.data.message || 'Search failed after retries');
-          }
-        } else if (res.data.code === 425) {
-          continue;
+      if (!('code' in res)) {
+        result = res;
+        break;
+      }
+
+      if (res.code === 404) {
+        if (retries < maxRetries) {
+          retries++;
+        } else {
+          throw new Error(res.data?.message || 'Search failed after retries');
         }
       }
     }
