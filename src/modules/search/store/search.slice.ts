@@ -27,9 +27,11 @@ const slice = createSlice({
   reducers: {
     setCountries(state, action: PayloadAction<NormalizedGeoItem[]>) {
       state.countries = action.payload;
+      state.isLoading = false;
     },
     setGeoSearchResults(state, action: PayloadAction<NormalizedGeoItem[]>) {
       state.geoSearchResults = action.payload;
+      state.isLoading = false;
     },
     setOptions(state, action: PayloadAction<NormalizedGeoItem[]>) {
       state.options = action.payload;
@@ -40,11 +42,13 @@ const slice = createSlice({
     setSearchType(state, action: PayloadAction<SearchState['searchType']>) {
       state.searchType = action.payload;
     },
-    setLoading(state, action: PayloadAction<boolean>) {
-      state.isLoading = action.payload;
+    startLoading(state) {
+      state.isLoading = true;
+      state.error = null;
     },
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
+      state.isLoading = false;
     },
     clearOptions(state) {
       state.options = [];
@@ -58,7 +62,7 @@ export const {
   setOptions,
   setSelected,
   setSearchType,
-  setLoading,
+  startLoading,
   setError,
   clearOptions,
 } = slice.actions;
