@@ -69,7 +69,7 @@ export const api = createApi({
           const data = await res.json();
           return { data };
         } catch (error: any) {
-          return { error: { status: error.code, error: error.message } };
+          return { error: error.error };
         }
       },
     }),
@@ -92,8 +92,8 @@ export const api = createApi({
           const res = await getHotels(countryId);
           const data = await res.json();
           return { data };
-        } catch (err: any) {
-          return { error: { status: 'CUSTOM_ERROR', error: err.message } };
+        } catch (error: any) {
+          return { error: { status: error.code, error: error.message } };
         }
       },
     }),
@@ -104,8 +104,8 @@ export const api = createApi({
           const res = await getHotel(hotelId);
           const data = await res.json();
           return { data };
-        } catch (err: any) {
-          return { error: { status: 'CUSTOM_ERROR', error: err.message } };
+        } catch (error: any) {
+          return { error: { status: error.code, error: error.message } };
         }
       },
     }),
@@ -116,8 +116,8 @@ export const api = createApi({
           const res = await getPrice(priceId);
           const data = await res.json();
           return { data };
-        } catch (err: any) {
-          return { error: { status: 'CUSTOM_ERROR', error: err.message } };
+        } catch (error: any) {
+          return { error: { status: error.code, error: error.message } };
         }
       },
     }),

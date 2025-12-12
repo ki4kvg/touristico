@@ -18,7 +18,7 @@ export const useHotels = () => {
       navigate(-1);
       return;
     }
-    dispatch(getHotelsThunk({ countryId: countryId.toString(), navigate: navigate, prices: prices }));
+    dispatch(getHotelsThunk({ countryId: countryId.toString() }));
   };
 
   useEffect(() => {

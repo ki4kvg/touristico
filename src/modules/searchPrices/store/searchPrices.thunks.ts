@@ -1,6 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { setData, setError, setToken, startLoading } from './searchPrices.slice.ts';
-import type { NormalisedPriceOffer } from '@/modules/searchPrices/dto/searchPrices.dto.ts';
+import { resetPrices, setPrices, setError, setToken, startLoading, setIsAborting } from './searchPrices.slice.ts';
 import { api } from '@/store/api.ts';
 import type { AppDispatch, RootState } from '@/store/store.ts';
 import { mapPriceResult } from '@/modules/searchPrices/mappers/searchPrices.mapper.ts';
@@ -11,56 +10,92 @@ interface SearchPayload {
   navigate: NavigateFunction;
 }
 
-export const searchPricesThunk = createAsyncThunk<
-  NormalisedPriceOffer[],
-  SearchPayload,
-  { dispatch: AppDispatch; state: RootState }
->('searchPrices/search', async ({ countryId, navigate }, { dispatch }) => {
-  dispatch(startLoading());
+const MAX_RETRIES = 2;
+const MAX_425_ATTEMPTS = 5;
 
-  try {
-    const startRes = await dispatch(api.endpoints.startSearchPrices.initiate({ countryId: countryId }));
-    const token = startRes.data!.token;
-    const waitUntil = new Date(startRes.data!.waitUntil).getTime();
+export const searchPricesThunk = createAsyncThunk<void, SearchPayload, { dispatch: AppDispatch; state: RootState }>(
+  'searchPrices/search',
+  async ({ countryId, navigate }, { dispatch, getState }) => {
+    const activeToken = getState().searchPrices.token;
+    if (activeToken) {
+      await dispatch(abortAndResetSearchThunk());
+    }
+    dispatch(startLoading());
 
-    dispatch(setToken({ token }));
+    try {
+      const startRes = await dispatch(api.endpoints.startSearchPrices.initiate({ countryId: countryId })).unwrap();
 
-    const maxRetries = 2;
-    let retries = 0;
-    let result: any = null;
-
-    while (true) {
-      const now = Date.now();
-      const waitTime = waitUntil - now;
-      if (waitTime > 0) {
-        await new Promise((res) => setTimeout(res, waitTime));
+      if (!startRes || !startRes.token || !startRes.waitUntil) {
+        throw new Error('Failed to start search');
       }
 
-      const res = await dispatch(api.endpoints.getSearchPrices.initiate({ token: token }));
+      const token = startRes.token;
+      const waitUntil = new Date(startRes.waitUntil).getTime();
 
-      if (!('code' in res)) {
-        result = res;
-        break;
-      }
+      dispatch(setToken({ token }));
 
-      if (res.code === 404) {
-        if (retries < maxRetries) {
-          retries++;
-        } else {
-          throw new Error(res.data?.message || 'Search failed after retries');
+      let retries = 0;
+      let dataNotReadyAttempts = 0;
+      let result: any = null;
+
+      while (true) {
+        const now = Date.now();
+        const waitTime = waitUntil - now;
+        if (waitTime > 0) {
+          await new Promise((res) => setTimeout(res, waitTime));
+        }
+
+        const res = await dispatch(api.endpoints.getSearchPrices.initiate({ token: token })).unwrap();
+
+        if (!res) {
+          return;
+        }
+
+        if (!('code' in res)) {
+          result = res;
+          break;
+        }
+
+        if (res.code === 404) {
+          if (retries < MAX_RETRIES) {
+            retries++;
+          } else {
+            throw new Error(res.message || 'Search failed after retries');
+          }
+        }
+
+        if (res.code === 425) {
+          dataNotReadyAttempts++;
+          if (dataNotReadyAttempts >= MAX_425_ATTEMPTS) {
+            throw new Error('Search not ready after maximum attempts');
+          }
         }
       }
+
+      const mapped = mapPriceResult(result.prices);
+
+      dispatch(setPrices(mapped));
+
+      if (mapped.length > 0) navigate(`/tours/${countryId}`);
+    } catch (error: any) {
+      dispatch(setError(error.message || 'Unknown error'));
+      throw error;
     }
+  },
+);
 
-    const mapped = mapPriceResult(result.prices);
-
-    dispatch(setData(mapped));
-
-    if (mapped.length > 0) navigate(`/tours/${countryId}`);
-
-    return mapped;
-  } catch (error: any) {
-    dispatch(setError(error.message || 'Unknown error'));
-    throw error;
-  }
-});
+export const abortAndResetSearchThunk = createAsyncThunk<void, void, { dispatch: AppDispatch; state: RootState }>(
+  'searchPrices/abortReset',
+  async (_, { dispatch, getState }) => {
+    dispatch(setIsAborting(true));
+    const { token: activeToken } = getState().searchPrices;
+    if (activeToken) {
+      try {
+        await dispatch(api.endpoints.stopSearchPrices.initiate({ token: activeToken }));
+      } catch (error) {
+        console.error(error, 'Aborting thunk error');
+      }
+    }
+    dispatch(resetPrices());
+  },
+);

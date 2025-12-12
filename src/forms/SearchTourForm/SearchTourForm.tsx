@@ -16,10 +16,11 @@ import { SEARCH_TOUR, searchPricesFormSchema, type SearchPricesFormValues } from
 export function SearchTourForm() {
   const { isOpen, setIsOpen, options, isLoading, selectOption, handleInputChange, searchField, clear } =
     useSearchTour();
-  const { isLoading: isPricesLoading, error, startSearch, isEmpty } = useSearchPrices();
+  const { isLoading: isPricesLoading, error, startSearch, isEmpty, isAborting } = useSearchPrices();
 
   const {
     setValue,
+    setError,
     handleSubmit,
     formState: { errors },
   } = useForm<SearchPricesFormValues>({
@@ -68,7 +69,12 @@ export function SearchTourForm() {
     }
   };
 
-  const onInvalid = (errors: any) => console.error('onInvalid', errors);
+  const onInvalid = (errors: any) => {
+    setError(SEARCH_TOUR.SEARCH_VALUE_ID, {
+      message: 'Будь ласка, оберіть варіант зі списку',
+    });
+    console.error('onInvalid', errors);
+  };
 
   return (
     <div className={styles.wrapper}>
@@ -94,14 +100,18 @@ export function SearchTourForm() {
             />
           ))}
         </DropdownInput>
-        <Button color="primary" type="submit">
+        <Button color="primary" type="submit" disabled={isAborting}>
           Знайти
         </Button>
-        {isPricesLoading && <Loader text="Виконується пошук" />}
+        {isAborting && <Loader text="Пошук скасовується" />}
 
-        {!isPricesLoading && error && <p className={styles.error_text}>{error}</p>}
+        {!isAborting && isPricesLoading && <Loader text="Виконується пошук" />}
 
-        {!isPricesLoading && !error && isEmpty && <EmptyState text="За вашим запитом турів не знайдено" />}
+        {!isAborting && !isPricesLoading && error && <p className={styles.error_text}>{error}</p>}
+
+        {!isAborting && !isPricesLoading && !error && isEmpty && (
+          <EmptyState text="За вашим запитом турів не знайдено" />
+        )}
       </form>
     </div>
   );
