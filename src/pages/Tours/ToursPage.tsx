@@ -1,5 +1,7 @@
+import ToursList from '@/components/ToursList/ToursList.tsx';
+
 function ToursPage() {
-  return <></>;
+  return <ToursList />;
 }
 
 export default ToursPage;
