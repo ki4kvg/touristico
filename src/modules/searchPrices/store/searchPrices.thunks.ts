@@ -4,16 +4,18 @@ import type { NormalisedPriceOffer } from '@/modules/searchPrices/dto/searchPric
 import { api } from '@/store/api.ts';
 import type { AppDispatch, RootState } from '@/store/store.ts';
 import { mapPriceResult } from '@/modules/searchPrices/mappers/searchPrices.mapper.ts';
+import type { NavigateFunction } from 'react-router-dom';
 
 interface SearchPayload {
   countryId: string;
+  navigate: NavigateFunction;
 }
 
 export const searchPricesThunk = createAsyncThunk<
   NormalisedPriceOffer[],
   SearchPayload,
   { dispatch: AppDispatch; state: RootState }
->('searchPrices/search', async ({ countryId }, { dispatch }) => {
+>('searchPrices/search', async ({ countryId, navigate }, { dispatch }) => {
   dispatch(startLoading());
 
   try {
@@ -56,6 +58,8 @@ export const searchPricesThunk = createAsyncThunk<
     const mapped = mapPriceResult(result.prices);
 
     dispatch(setData(mapped));
+
+    if (mapped.length > 0) navigate(`/tours/${countryId}`);
 
     return mapped;
   } catch (error: any) {
